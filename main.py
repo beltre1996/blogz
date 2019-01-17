@@ -3,10 +3,10 @@ from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 app.config['DEBUG'] = True
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://blogz:blogz@localhost:8889/blogz'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://blogz:password@localhost:8889/blogz'
 app.config['SQLALCHEMY_ECHO'] = True
 db = SQLAlchemy(app)
-app.secret_key = 'YES'
+app.secret_key = 'password'
 
 
 class Blog(db.Model):
@@ -37,7 +37,7 @@ class User(db.Model):
 
 @app.before_request
 def require_login():
-    allowed_routes = ['login', 'blog', 'register', 'individual', 
+    allowed_routes = ['login', 'blog', 'register', 'singleUser', 
         'index', 'home', 'OneBlog', 'user_page', 'UserPosts']
     if 'user' not in session and request.endpoint not in allowed_routes:
             return redirect('/login')
@@ -48,7 +48,7 @@ def index():
     return redirect("/blog")
 
 
-@app.route("/blog")
+@app.route("/home")
 def home():
     blogs = Blog.query.all()
     welcome = "Not logged in"
@@ -82,7 +82,7 @@ def AddBlog():
             db.session.add(new_blog)
             db.session.commit()
             author = User.query.filter_by(id= new_blog.owner_id).first()
-            return redirect("/individual?blog_title="+new_title)
+            return redirect("/singleUser?blog_title="+new_title)
 
     return render_template('add.html', title= "Add a blog post", 
         add_body= new_body, add_title= new_title,
@@ -90,7 +90,7 @@ def AddBlog():
         welcome= welcome)
 
 
-@app.route("/individual")
+@app.route("/singleUser")
 def OneBlog():
     welcome = "Not logged in"
     if 'user' in session:
@@ -100,7 +100,7 @@ def OneBlog():
     if title:
         existing_blog = Blog.query.filter_by(title= title).first()
         author = User.query.filter_by(id= existing_blog.owner_id).first()
-        return render_template("individual.html", 
+        return render_template("singleUser.html", 
             title= existing_blog.title, body= existing_blog.body,
             author= author.username, welcome= welcome)
 
@@ -139,7 +139,7 @@ def register():
             error["pass_error"] = "Password must be more than two characters long"
         else:
             if password != verify:
-                error["verify_error"] = "Pasword and Verify must match"
+                error["verify_error"] = "Pasword and Verify must be the same"
 
         existing_user = User.query.filter_by(username=username).first()
         if existing_user:
@@ -152,7 +152,7 @@ def register():
             session['user'] = new_user.username
             return redirect("/blog")
 
-    return render_template("register.html", title= "Register for this Blog",
+    return render_template("register.html", title= "Register this Blog",
         name_error= error["name_error"], pass_error= error["pass_error"],
         verify_error= error["verify_error"])
 
