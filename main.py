@@ -1,18 +1,30 @@
 from flask import Flask, request, redirect, render_template, session, flash
 from flask_sqlalchemy import SQLAlchemy
+import string
+import hashlib
+import random
 
 app = Flask(__name__)
 app.config['DEBUG'] = True
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://blogz:password@localhost:8889/blogz'
-app.config['SQLALCHEMY_ECHO'] = True
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://blogz:password@localhost:5050/blogz'
+
 db = SQLAlchemy(app)
 app.secret_key = 'password'
 
+def make_pw_hash(password):
+    hash = hashlib.sha256(str.encode(password)).hexdigest()
+    return '{0}'.format(hash)
+
+def check_pw_hash(password, hash):
+   if make_pw_hash(password) == hash:
+       return True
+
+   return False
 
 class Blog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100))
-    body = db.Column(db.String(2500))
+    title = db.Column(db.String(75))
+    body = db.Column(db.String(500))
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
     def __init__(self, title, body, owner):
@@ -23,8 +35,8 @@ class Blog(db.Model):
 class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(120), unique=True)
-    password = db.Column(db.String(120))
+    username = db.Column(db.String(50), unique=True)
+    password = db.Column(db.String(50))
     blogs = db.relationship('Blog', backref='owner')
 
     def __init__(self, username, password):
@@ -38,7 +50,7 @@ class User(db.Model):
 @app.before_request
 def require_login():
     allowed_routes = ['login', 'blog', 'register', 'singleUser', 
-        'index', 'home', 'OneBlog', 'user_page', 'UserPosts']
+        'index', 'home', 'OneBlog', 'userPage', 'UserPosts']
     if 'user' not in session and request.endpoint not in allowed_routes:
             return redirect('/login')
 
@@ -48,7 +60,7 @@ def index():
     return redirect("/blog")
 
 
-@app.route("/home")
+@app.route("/blog")
 def home():
     blogs = Blog.query.all()
     welcome = "Not logged in"
@@ -190,7 +202,6 @@ def logout():
     if 'user' in session:
         del session['user']
     return redirect('/blog')
-
 
 
 if __name__ == '__main__':
